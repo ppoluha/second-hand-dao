@@ -1,38 +1,60 @@
 package se.hkr.secondhand;
 
-import se.hkr.secondhand.dao.EmployeeDAO;
+import se.hkr.secondhand.dao.CustomerDAO;
 import se.hkr.secondhand.dao.OrderDAO;
-import se.hkr.secondhand.model.Employee;
+import se.hkr.secondhand.model.Customer;
+import se.hkr.secondhand.model.OrderDetail;
 import se.hkr.secondhand.model.OrderHead;
 import se.hkr.secondhand.model.OrderLine;
 
-import java.io.IOException;
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
         try (Connection conn = DBConnection.getConnection()) {
-            EmployeeDAO employeeDAO = new EmployeeDAO(conn);
-            OrderDAO orderDAO = new OrderDAO(conn);
+            // Initialize DAOs
+            CustomerDAO customerDao = new CustomerDAO(conn);
+            OrderDAO orderDao = new OrderDAO(conn);
 
-            // Example: Create a new employee
-            Employee newEmployee = new Employee(4, "123 Elm St", "New York", "John", "Doe", "10001");
-            employeeDAO.createEmployee(newEmployee);
+            // Example: Create a new customer
+            Customer newCustomer = new Customer(0, "Lindhagensgatan 76", LocalDate.of(1992, 7, 21), "Stockholm", "Lisa", "Nilsson", "112 18");
+            customerDao.createCustomer(newCustomer);
 
-            // Example: Create a new order
-            OrderHead newOrder = new OrderHead(-1, LocalDate.now(), 1, 1);
-            List<OrderLine> lines = new ArrayList<>();
-            lines.add(new OrderLine(-1, 1, -1, 3));
-            orderDAO.createOrder(newOrder, lines);
+            // Fetch all customers and print them
+            System.out.println("All Customers:");
+            List<Customer> customers = customerDao.listAllCustomers();
+            customers.forEach(System.out::println);
 
-            // Display all employees
-            List<Employee> employees = employeeDAO.listAllEmployees();
-            employees.forEach(System.out::println);
-        } catch (SQLException | IOException e) {
+            // Example: Create a new order with order lines for an existing employee and customer
+            // Assuming IDs for employee and customer are known and valid
+            OrderHead newOrder = new OrderHead(0, LocalDate.now(), 1, 1); // customer ID and employee ID need to exist in DB
+            List<OrderLine> orderLines = List.of(
+                    new OrderLine(0, 1, 0, 2), // furniture ID and quantity
+                    new OrderLine(0, 2, 0, 1)
+            );
+            orderDao.createOrder(newOrder, orderLines);
+
+            // Fetch all orders for a specified employee and print them
+            System.out.println("All Orders for Employee 1:");
+            List<OrderHead> orders = orderDao.listOrdersForEmployee(1);
+            orders.forEach(order -> System.out.println(order));
+
+            // Fetch all orders with customer names for a specified employee
+            System.out.println("All Orders with Customer Names for Employee 1:");
+            List<OrderDetail> detailedOrdersWithCustomerNames = orderDao.listOrdersWithCustomerNameForEmployee(1);
+            detailedOrdersWithCustomerNames.forEach(order -> System.out.println(order));
+
+            // Fetch all orders with details for a specified employee
+            System.out.println("All Detailed Orders for Employee 1:");
+            List<OrderDetail> detailedOrders = orderDao.listOrdersWithDetailsForEmployee(1);
+            detailedOrders.forEach(order -> {
+                System.out.println("Order ID: " + order.order().id() + ", Customer Name: " + order.customerName());
+                order.lineDetails().forEach(line -> System.out.println("  Line: " + line.line().quantity() + "x " + line.furnitureName()));
+            });
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
